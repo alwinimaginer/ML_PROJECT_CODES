@@ -1,0 +1,87 @@
+import pandas as pd
+
+# Load dataset
+df = pd.read_csv("B0007.csv")
+
+# Step 1: Filter only discharge cycles
+df_discharge = df[df["cycle_type"].str.lower() == "discharge"]
+
+print("Original shape:", df.shape)
+print("Discharge-only shape:", df_discharge.shape)
+
+# Preview
+df_discharge
+
+# step 1 : Import Libraries
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+
+
+# step 2 : Load Excel file
+df = pd.read_excel("B0007_discharge.xlsx")
+
+print(df.shape)
+df.head()
+
+# step 3 : Compute SoH
+if "soh" not in df.columns:
+    initial_capacity = df["capacity"].iloc[0]   # first cycle capacity
+    df["soh"] = df["capacity"] / initial_capacity
+
+# step 4 : Select Features & Target
+drop_cols = ["cycle_index", "soh", "capacity", "cycle_type"]  # don't use these
+X = df.drop(columns=[c for c in drop_cols if c in df.columns])
+y = df["soh"]
+
+
+# Step 5 : Train/Test Split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+
+# Step 6 :Train Linear Regression
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+
+# Step 7 : Predictions
+y_pred = model.predict(X_test)
+
+
+# Step 8 : Evaluate Performance
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+r2 = r2_score(y_test, y_pred)
+
+print(f"RMSE: {rmse:.4f}")
+print(f"R² Score: {r2:.4f}")
+
+
+# Step 9 : Visualization
+
+# 1) Actual vs Predicted SoH
+plt.figure(figsize=(10,6))  # larger figure
+plt.scatter(y_test, y_pred, alpha=0.3, s=10)  # smaller, transparent points
+plt.plot([y_test.min(), y_test.max()],
+         [y_test.min(), y_test.max()],
+         'r--', lw=2, label="Ideal Fit")
+plt.xlabel("Actual SoH")
+plt.ylabel("Predicted SoH")
+plt.title("Linear Regression Predictions (Less Overlap)")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# 2) Degradation curve comparison
+plt.plot(y_test.values[:100], label="Actual SoH", marker='o')
+plt.plot(y_pred[:100], label="Predicted SoH", marker='x')
+plt.legend()
+plt.title("SoH Degradation Curve (Sample)")
+plt.show()
+
+
